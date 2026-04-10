@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App & Game Finder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #080c10;
+    color: #e0e8f0;
+    font-family: 'Courier New', monospace;
+    background-image: linear-gradient(rgba(0,255,136,0.025) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,255,136,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 16px; }
+  .header { text-align: center; margin-bottom: 44px; }
+  .header-sub { font-size: 11px; letter-spacing: 4px; color: #00ff88; margin-bottom: 10px; opacity: 0.5; }
+  .header h1 {
+    font-size: clamp(24px, 6vw, 44px); font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, #00ff88 50%, #00aaff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+  }
+  .header p { color: #334; font-size: 11px; margin-top: 8px; letter-spacing: 3px; }
+
+  .search-row { display: flex; gap: 10px; margin-bottom: 24px; }
+  .search-wrap { flex: 1; position: relative; }
+  .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #00ff88; opacity: 0.4; font-size: 18px; pointer-events: none; }
+  input {
+    width: 100%; padding: 14px 14px 14px 40px;
+    background: #0d1117; border: 1px solid #1e2830;
+    border-radius: 12px; color: #e0e8f0; font-size: 15px;
+    font-family: 'Courier New', monospace; outline: none;
+  }
+  input:focus { border-color: rgba(0,255,136,0.4); }
+  button#searchBtn {
+    padding: 14px 22px; border: none; border-radius: 12px;
+    background: linear-gradient(135deg, #00ff88, #00cc70);
+    color: #000; font-weight: bold; font-family: 'Courier New', monospace;
+    font-size: 14px; cursor: pointer; letter-spacing: 1px; min-width: 86px;
+  }
+  button#searchBtn:disabled { background: #0d1117; color: #00ff88; cursor: wait; }
+
+  .history { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+  .history-label { color: #334; font-size: 11px; }
+  .hist-btn {
+    padding: 3px 11px; background: #0d1117; border: 1px solid #1e2830;
+    border-radius: 20px; color: #445; font-size: 11px;
+    font-family: 'Courier New', monospace; cursor: pointer;
+  }
+
+  .loading { text-align: center; padding: 60px 0; color: #00ff88; display: none; }
+  .spin { font-size: 34px; display: inline-block; animation: spin 1.5s linear infinite; margin-bottom: 14px; }
+  .loading p { font-size: 11px; letter-spacing: 4px; opacity: 0.5; }
+
+  .error-box { padding: 18px; background: #ff003318; border: 1px solid #ff003340; border-radius: 12px; color: #ff4466; text-align: center; display: none; }
+
+  .results { display: flex; flex-direction: column; gap: 14px; display: none; }
+
+  .card {
+    background: #0d1117; border: 1px solid #1e2830;
+    border-radius: 16px; padding: 22px; position: relative; overflow: hidden;
+  }
+  .card-top-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--line-color, #00ff88), transparent);
+  }
+  .card.blue { border-color: #00aaff28; }
+  .card.blue .card-top-line { --line-color: #00aaff; }
+  .card.pink { border-color: #ff44aa28; }
+  .card.pink .card-top-line { background: linear-gradient(90deg, transparent, #ff44aa, #ffaa00, transparent); }
+
+  .card-header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+  .card-title { font-size: 21px; color: #fff; margin-bottom: 10px; }
+  .badges { display: flex; gap: 7px; flex-wrap: wrap; }
+  .badge {
+    padding: 2px 10px; border-radius: 20px; font-size: 11px;
+    font-family: 'Courier New', monospace;
+    background: var(--badge-bg); border: 1px solid var(--badge-border); color: var(--badge-color);
+  }
+  .card-meta { text-align: right; color: #556; font-size: 12px; }
+  .card-meta span { color: #99aabb; font-size: 13px; display: block; }
+  .card-desc { color: #7788aa; line-height: 1.7; margin-bottom: 14px; font-size: 14px; }
+
+  .card-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .card-title-row h3 { font-size: 13px; letter-spacing: 2px; margin: 0; }
+  .section-green h3 { color: #00ff88; }
+  .section-blue h3 { color: #00aaff; }
+  .section-purple h3 { color: #8866ff; }
+  .section-orange h3 { color: #ffaa00; }
+  .section-yellow h3 { color: #ffcc00; }
+  .section-pink h3 { color: #ff44aa; }
+
+  .dl-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: #ffffff03; border-radius: 10px; border: 1px solid #ffffff07; margin-bottom: 8px; }
+  .dl-icon { font-size: 18px; }
+  .dl-info { flex: 1; }
+  .dl-info strong { color: #ccd; font-size: 13px; display: block; }
+  .dl-info small { color: #445; font-size: 11px; }
+  .dl-btn {
+    padding: 7px 14px; border-radius: 8px; text-decoration: none;
+    font-size: 13px; font-family: 'Courier New', monospace; cursor: pointer;
+    border: 1px solid #00aaff40; background: #00aaff12; color: #00aaff;
+    transition: background 0.2s;
+  }
+  .dl-btn:hover { background: #00aaff22; }
+  .dl-btn.disabled { border-color: #ffffff0f; background: #ffffff05; color: #333; cursor: not-allowed; }
+
+  .beta-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: #00ff8805; border-radius: 10px; border: 1px solid #00ff8815; margin-bottom: 8px; }
+  .beta-info { flex: 1; }
+  .beta-info strong { color: #ccd; font-size: 13px; display: block; }
+  .beta-info small { color: #445; font-size: 11px; }
+  .beta-btn { padding: 7px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-family: 'Courier New', monospace; border: 1px solid #00ff8840; background: #00ff8812; color: #00ff88; transition: background 0.2s; }
+  .beta-btn:hover { background: #00ff8822; }
+
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .feat-item { display: flex; gap: 7px; color: #7788aa; font-size: 13px; margin-bottom: 8px; }
+  .feat-item .dot { flex-shrink: 0; }
+
+  /* Fruit filter */
+  .fruit-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .fruit-filter {
+    padding: 3px 11px; border-radius: 20px; font-size: 11px;
+    font-family: 'Courier New', monospace; cursor: pointer;
+    border: 1px solid #1e2830; background: transparent; color: #445;
+    transition: all 0.2s;
+  }
+  .fruit-filter.active-Common { border-color: #aabbcc; background: #aabbcc18; color: #aabbcc; }
+  .fruit-filter.active-Uncommon { border-color: #44cc88; background: #44cc8818; color: #44cc88; }
+  .fruit-filter.active-Rare { border-color: #4488ff; background: #4488ff18; color: #4488ff; }
+  .fruit-filter.active-Legendary { border-color: #ffaa00; background: #ffaa0018; color: #ffaa00; }
+  .fruit-filter.active-Mythical { border-color: #ff44aa; background: #ff44aa18; color: #ff44aa; }
+  .fruit-filter.active-All { border-color: #00ff88; background: #00ff8818; color: #00ff88; }
+
+  .fruit-list { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+  .fruit-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 14px; background: #ffffff03; border-radius: 10px;
+  }
+  .fruit-item.hidden { display: none; }
+  .fruit-left { flex: 1; }
+  .fruit-name { color: #dde; font-size: 13px; font-weight: bold; display: inline; margin-right: 7px; }
+  .rarity-badge { font-size: 10px; padding: 1px 7px; border-radius: 10px; }
+  .fruit-note { color: #445566; font-size: 11px; margin-top: 3px; }
+  .fruit-right { text-align: right; flex-shrink: 0; }
+  .fruit-price { color: #ffcc00; font-size: 12px; }
+  .fruit-trade { font-size: 11px; font-weight: bold; margin-top: 3px; }
+
+  /* Star rating */
+  .star-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .star-score { text-align: center; }
+  .star-score .big { font-size: 48px; font-weight: 900; color: #fff; line-height: 1; }
+  .star-score .votes { font-size: 11px; color: #445; margin-top: 4px; }
+  .stars-display { display: flex; gap: 3px; margin-bottom: 10px; }
+  .star-d { font-size: 24px; }
+  .vote-label { font-size: 11px; color: #445; margin-bottom: 7px; }
+  .stars-vote { display: flex; gap: 5px; }
+  .star-btn { font-size: 22px; background: none; border: none; cursor: pointer; padding: 0; color: #2a3040; transition: transform 0.15s, color 0.1s; }
+  .star-btn:hover { transform: scale(1.2); color: #ffcc00; }
+  .star-btn.voted { color: #ffcc00; }
+
+  .community-links { display: flex; gap: 9px; flex-wrap: wrap; }
+  .comm-btn { padding: 7px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-family: 'Courier New', monospace; border: 1px solid #00aaff38; background: #00aaff12; color: #00aaff; transition: background 0.2s; }
+  .comm-btn:hover { background: #00aaff22; }
+
+  .fun-fact { display: flex; gap: 10px; align-items: flex-start; }
+  .fun-fact p { color: #445566; font-size: 13px; font-style: italic; line-height: 1.6; }
+
+  .empty-state { text-align: center; padding: 70px 20px; }
+  .empty-state .icon { font-size: 50px; opacity: 0.15; margin-bottom: 16px; }
+  .empty-state p { font-size: 12px; letter-spacing: 3px; color: #223; }
+  .empty-state small { font-size: 11px; opacity: 0.4; color: #334; margin-top: 8px; display: block; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #080c10; }
+  ::-webkit-scrollbar-thumb { background: #1e2830; border-radius: 3px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-sub">// SYSTEM INITIALIZED</div>
+    <h1>APP & GAME FINDER</h1>
+    <p>İNDİRME · AKTİF BETA · MEYVE DEĞERLERİ · PUAN</p>
+  </div>
+
+  <div class="search-row">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Roblox, Minecraft, WhatsApp, Blox Fruits..." />
+    </div>
+    <button id="searchBtn" onclick="doSearch()">ARA →</button>
+  </div>
+
+  <div class="history" id="historyRow" style="display:none">
+    <span class="history-label">SON:</span>
+    <div id="historyBtns"></div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spin">◌</div>
+    <p>TARANIYOR...</p>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="results" id="results"></div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="icon">⌕</div>
+    <p>OYUN VEYA UYGULAMA ARA</p>
+    <small>Blox Fruits yazarsan meyve değerlerini de gösterir 🍎</small>
+  </div>
+</div>
+
+<script>
+const KNOWN_LINKS = {
+  "roblox": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.roblox.client", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/roblox/id431946152", platform: "iOS", type: "store" },
+    { label: "Resmi Site", url: "https://www.roblox.com/download", platform: "PC", type: "exe" },
+  ],
+  "minecraft": [
+    { label: "Google Play (Bedrock)", url: "https://play.google.com/store/apps/details?id=com.mojang.minecraftpe", platform: "Android", type: "store" },
+    { label: "App Store (Bedrock)", url: "https://apps.apple.com/app/minecraft/id479516143", platform: "iOS", type: "store" },
+    { label: "Resmi Site (Java + Bedrock)", url: "https://www.minecraft.net/download", platform: "PC", type: "exe" },
+  ],
+  "blox fruits": [
+    { label: "Roblox üzerinden oyna", url: "https://www.roblox.com/games/2753915549/Blox-Fruits", platform: "Roblox", type: "web" },
+    { label: "Roblox Android", url: "https://play.google.com/store/apps/details?id=com.roblox.client", platform: "Android", type: "store" },
+  ],
+  "whatsapp": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.whatsapp", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/whatsapp-messenger/id310633997", platform: "iOS", type: "store" },
+    { label: "Windows / Mac", url: "https://www.whatsapp.com/download", platform: "PC", type: "exe" },
+  ],
+  "discord": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.discord", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/discord/id985746746", platform: "iOS", type: "store" },
+    { label: "Windows / Mac / Linux", url: "https://discord.com/download", platform: "PC", type: "exe" },
+  ],
+  "spotify": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.spotify.music", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/spotify/id324684580", platform: "iOS", type: "store" },
+    { label: "Resmi Site", url: "https://www.spotify.com/download", platform: "PC", type: "exe" },
+  ],
+  "youtube": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.google.android.youtube", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/youtube/id544007664", platform: "iOS", type: "store" },
+  ],
+  "fortnite": [
+    { label: "Epic Games (PC)", url: "https://store.epicgames.com/en-US/download", platform: "PC", type: "exe" },
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.epicgames.fortnite", platform: "Android", type: "store" },
+  ],
+  "among us": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.innersloth.spacemafia", platform: "Android", type: "store" },
+    { label: "Steam", url: "https://store.steampowered.com/app/945360/Among_Us/", platform: "PC", type: "store" },
+  ],
+  "genshin impact": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.miHoYo.GenshinImpact", platform: "Android", type: "store" },
+    { label: "Resmi Site (PC)", url: "https://genshin.hoyoverse.com/en/download", platform: "PC", type: "exe" },
+  ],
+  "telegram": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=org.telegram.messenger", platform: "Android", type: "store" },
+    { label: "Resmi Site", url: "https://desktop.telegram.org/", platform: "PC", type: "exe" },
+  ],
+  "pubg mobile": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.tencent.ig", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/pubg-mobile/id1330123889", platform: "iOS", type: "store" },
+  ],
+  "free fire": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.dts.freefireth", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/garena-free-fire/id1300146617", platform: "iOS", type: "store" },
+  ],
+  "brawl stars": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.supercell.brawlstars", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/brawl-stars/id1229016807", platform: "iOS", type: "store" },
+  ],
+  "clash of clans": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.supercell.clashofclans", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/clash-of-clans/id529479190", platform: "iOS", type: "store" },
+  ],
+  "clash royale": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.supercell.clashroyale", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/clash-royale/id1053012308", platform: "iOS", type: "store" },
+  ],
+  "valorant": [
+    { label: "Resmi Site (PC)", url: "https://playvalorant.com/download/", platform: "PC", type: "exe" },
+  ],
+  "steam": [
+    { label: "Resmi Site", url: "https://store.steampowered.com/about/", platform: "PC", type: "exe" },
+  ],
+  "tiktok": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.zhiliaoapp.musically", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/tiktok/id835599320", platform: "iOS", type: "store" },
+  ],
+  "instagram": [
+    { label: "Google Play", url: "https://play.google.com/store/apps/details?id=com.instagram.android", platform: "Android", type: "store" },
+    { label: "App Store", url: "https://apps.apple.com/app/instagram/id389801252", platform: "iOS", type: "store" },
+  ],
+};
+
+function getKnownLinks(name) {
+  if (!name) return null;
+  const k = name.toLowerCase().trim();
+  for (const [key, val] of Object.entries(KNOWN_LINKS)) {
+    if (k.includes(key) || key.includes(k)) return val;
+  }
+  return null;
+}
+
+const RARITY_COLORS = { Common:"#aabbcc", Uncommon:"#44cc88", Rare:"#4488ff", Legendary:"#ffaa00", Mythical:"#ff44aa" };
+const TRADE_COLORS = { Low:"#556677", Mid:"#44aaff", High:"#ffaa00", "Top Tier":"#ff44aa" };
+const PLATFORM_ICONS = { android:"🤖", ios:"🍎", iphone:"🍎", mac:"🍎", windows:"🪟", pc:"🪟", linux:"🐧", web:"🌐", roblox:"🌐" };
+
+function getPIcon(p="") {
+  const s = p.toLowerCase();
+  for (const [k,v] of Object.entries(PLATFORM_ICONS)) if (s.includes(k)) return v;
+  return "📦";
+}
+
+let history = [];
+let ratings = JSON.parse(localStorage.getItem("appfinder_html_v1") || "{}");
+let currentFruitFilter = "All";
+let currentFruits = [];
+
+const SYSTEM_PROMPT = `You are an expert app and game research assistant. Respond in JSON ONLY. No markdown, no backticks, no extra text.
+
+RULES:
+- beta_links: ONLY include if currently ACTIVE with a real working URL. If unsure, omit.
+- download_links: Only include if 100% sure URL is correct and active.
+- NEVER fabricate URLs.
+- fruit_values: ONLY for Blox Fruits. Use real known in-game values. No URLs inside fruit_values.
+
+JSON:
+{
+  "name": "Official name",
+  "type": "Game or Application",
+  "description": "2-3 sentence description",
+  "developer": "Developer name",
+  "platforms": ["Platform1"],
+  "genre": "Genre",
+  "latest_version": "Version or Unknown",
+  "release_year": "Year",
+  "status": "Active or Discontinued or Beta",
+  "key_features": ["Feature 1","Feature 2","Feature 3","Feature 4"],
+  "recent_updates": ["Update 1","Update 2"],
+  "download_links": [{"label":"Store","url":"real URL or null","platform":"Android","type":"store"}],
+  "beta_links": [{"label":"Name","url":"real active URL","description":"desc","active":true}],
+  "community_links": [{"label":"Discord","url":"real URL or null"}],
+  "fruit_values": [{"name":"Fruit","rarity":"Common","in_game_price":150000,"trade_value":"Low","notes":"note"}],
+  "fun_fact": "fact",
+  "average_rating": 4.2
+}`;
+
+async function doSearch() {
+  const q = document.getElementById("searchInput").value.trim();
+  if (!q) return;
+
+  document.getElementById("emptyState").style.display = "none";
+  document.getElementById("results").style.display = "none";
+  document.getElementById("errorBox").style.display = "none";
+  document.getElementById("loading").style.display = "block";
+  document.getElementById("searchBtn").disabled = true;
+  document.getElementById("searchBtn").textContent = "...";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: "Research this: " + q }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content || []).map(i => i.text || "").join("");
+    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+
+    const known = getKnownLinks(parsed.name || q);
+    if (known) parsed.download_links = known;
+
+    history = [{ q, data: parsed }, ...history.slice(0, 4)];
+    updateHistory();
+    renderResults(parsed);
+  } catch(e) {
+    document.getElementById("loading").style.display = "none";
+    const eb = document.getElementById("errorBox");
+    eb.textContent = "Bir hata oluştu. Tekrar dene.";
+    eb.style.display = "block";
+  }
+
+  document.getElementById("searchBtn").disabled = false;
+  document.getElementById("searchBtn").textContent = "ARA →";
+}
+
+document.getElementById("searchInput").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+
+function updateHistory() {
+  const row = document.getElementById("historyRow");
+  const btns = document.getElementById("historyBtns");
+  if (history.length === 0) { row.style.display = "none"; return; }
+  row.style.display = "flex";
+  btns.innerHTML = history.map((h, i) =>
+    `<button class="hist-btn" onclick="loadHistory(${i})">${h.q}</button>`
+  ).join("");
+}
+
+function loadHistory(i) {
+  document.getElementById("searchInput").value = history[i].q;
+  renderResults(history[i].data);
+}
+
+function badge(text, color) {
+  return `<span class="badge" style="--badge-bg:${color}18;--badge-border:${color}40;--badge-color:${color}">${text}</span>`;
+}
+
+function renderResults(d) {
+  document.getElementById("loading").style.display = "none";
+  const el = document.getElementById("results");
+  el.style.display = "flex";
+
+  const statusColor = d.status === "Active" ? "#00ff88" : d.status === "Beta" ? "#ffaa00" : "#ff4444";
+  const known = getKnownLinks(d.name);
+
+  let html = "";
+
+  // Main info
+  html += `<div class="card">
+    <div class="card-top-line"></div>
+    <div class="card-header">
+      <div>
+        <div class="card-title">${d.name}</div>
+        <div class="badges">
+          ${badge(d.type,"#00ff88")}
+          ${badge(d.genre,"#00aaff")}
+          ${badge(d.status, statusColor)}
+          ${d.latest_version && d.latest_version !== "Unknown" ? badge("v"+d.latest_version,"#8866ff") : ""}
+        </div>
+      </div>
+      <div class="card-meta">GELİŞTİRİCİ<span>${d.developer}</span>${d.release_year}</div>
+    </div>
+    <p class="card-desc">${d.description}</p>
+    <div class="badges">${(d.platforms||[]).map(p => badge(getPIcon(p)+" "+p,"#8866ff")).join("")}</div>
+  </div>`;
+
+  // Downloads
+  if (d.download_links && d.download_links.length > 0) {
+    html += `<div class="card blue">
+      <div class="card-top-line"></div>
+      <div class="card-title-row section-blue">
+        <h3>⬇ İNDİRME LİNKLERİ</h3>
+        ${known ? badge("✓ DOĞRULANMIŞ","#00ff88") : ""}
+      </div>`;
+    d.download_links.forEach(l => {
+      const hasUrl = l.url && l.url !== "null";
+      html += `<div class="dl-item">
+        <span class="dl-icon">${getPIcon(l.platform)}</span>
+        <div class="dl-info"><strong>${l.label}</strong><small>${l.platform} · ${(l.type||"").toUpperCase()}</small></div>
+        ${hasUrl
+          ? `<a href="${l.url}" target="_blank" class="dl-btn">⬇ İNDİR</a>`
+          : `<span class="dl-btn disabled">✗ YOK</span>`}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Beta
+  const activeBeta = (d.beta_links||[]).filter(l => l.active && l.url);
+  if (activeBeta.length > 0) {
+    html += `<div class="card" style="border-color:#00ff8822">
+      <div class="card-top-line"></div>
+      <div class="card-title-row section-green">
+        <span>🧪</span><h3>AKTİF BETA / TEST SUNUCULARI</h3>${badge("● CANLI","#00ff88")}
+      </div>`;
+    activeBeta.forEach(l => {
+      html += `<div class="beta-item">
+        <div class="beta-info"><strong>${l.label}</strong><small>${l.description||""}</small></div>
+        <a href="${l.url}" target="_blank" class="beta-btn">🔗 AÇ</a>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Fruit values
+  if (d.fruit_values && d.fruit_values.length > 0) {
+    currentFruits = d.fruit_values;
+    currentFruitFilter = "All";
+    html += `<div class="card pink">
+      <div class="card-top-line"></div>
+      <div class="card-title-row section-pink">
+        <span>🍎</span><h3>MEYVE DEĞERLERİ</h3>
+        <span style="font-size:11px;color:#445;margin-left:auto">${d.fruit_values.length} meyve</span>
+      </div>
+      <div class="fruit-filters">
+        ${["All","Common","Uncommon","Rare","Legendary","Mythical"].map(r =>
+          `<button class="fruit-filter${r==="All"?" active-All":""}" onclick="filterFruits('${r}')" id="ff-${r}">${r}</button>`
+        ).join("")}
+      </div>
+      <div class="fruit-list" id="fruitList">
+        ${d.fruit_values.map((f,i) => {
+          const rc = RARITY_COLORS[f.rarity] || "#667";
+          const tc = TRADE_COLORS[f.trade_value] || "#556";
+          return `<div class="fruit-item" data-rarity="${f.rarity}" style="border:1px solid ${rc}20">
+            <div class="fruit-left">
+              <span class="fruit-name">${f.name}</span>
+              <span class="rarity-badge" style="background:${rc}18;border:1px solid ${rc}35;color:${rc}">${f.rarity}</span>
+              ${f.notes ? `<div class="fruit-note">${f.notes}</div>` : ""}
+            </div>
+            <div class="fruit-right">
+              ${f.in_game_price > 0 ? `<div class="fruit-price">🪙 ${f.in_game_price.toLocaleString()}</div>` : ""}
+              <div class="fruit-trade" style="color:${tc}">${f.trade_value}</div>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+
+  // Features + Updates grid
+  html += `<div class="grid2">
+    <div class="card">
+      <div class="card-title-row section-purple"><h3>⚡ ÖZELLİKLER</h3></div>
+      ${(d.key_features||[]).map(f => `<div class="feat-item"><span class="dot" style="color:#8866ff">▸</span>${f}</div>`).join("")}
+    </div>
+    <div class="card">
+      <div class="card-title-row section-orange"><h3>📋 SON GÜNCELLEMELER</h3></div>
+      ${(d.recent_updates||[]).map(u => `<div class="feat-item"><span class="dot" style="color:#ffaa00">▸</span>${u}</div>`).join("")}
+    </div>
+  </div>`;
+
+  // Star rating
+  const key = (d.name||"").toLowerCase().replace(/\s+/g,"_");
+  const myVote = ratings[key]?.myVote || 0;
+  const votes = ratings[key]?.votes || [];
+  const all = [...votes, ...(d.average_rating ? [d.average_rating] : [])];
+  const avg = all.length > 0 ? all.reduce((a,b)=>a+b,0)/all.length : 0;
+
+  html += `<div class="card">
+    <div class="card-title-row section-yellow"><h3>⭐ KULLANICI PUANI</h3></div>
+    <div class="star-row">
+      <div class="star-score">
+        <div class="big">${avg.toFixed(1)}</div>
+        <div class="votes">${all.length} OY</div>
+      </div>
+      <div>
+        <div class="stars-display">
+          ${[1,2,3,4,5].map(s => `<span class="star-d" style="color:${avg>=s?"#ffcc00":avg>=s-0.5?"#ffcc0055":"#2a3040"}">${avg>=s?"★":avg>=s-0.5?"⯨":"☆"}</span>`).join("")}
+        </div>
+        <div class="vote-label">${myVote > 0 ? "SENİN OYUN: "+"★".repeat(myVote) : "OY VER:"}</div>
+        <div class="stars-vote">
+          ${[1,2,3,4,5].map(s => `<button class="star-btn ${myVote>=s?"voted":""}" onclick="voteApp('${key}',${s},'${d.name}',${d.average_rating||0})">★</button>`).join("")}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // Community
+  const commLinks = (d.community_links||[]).filter(l => l.url);
+  if (commLinks.length > 0) {
+    html += `<div class="card">
+      <div class="card-title-row section-blue"><h3>🌐 TOPLULUK</h3></div>
+      <div class="community-links">
+        ${commLinks.map(l => `<a href="${l.url}" target="_blank" class="comm-btn">↗ ${l.label}</a>`).join("")}
+      </div>
+    </div>`;
+  }
+
+  // Fun fact
+  if (d.fun_fact) {
+    html += `<div class="card" style="border-color:#ffffff07">
+      <div class="fun-fact"><span>💡</span><p>${d.fun_fact}</p></div>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+  el.scrollIntoView({ behavior: "smooth" });
+}
+
+function filterFruits(rarity) {
+  currentFruitFilter = rarity;
+  document.querySelectorAll(".fruit-filter").forEach(btn => {
+    const r = btn.id.replace("ff-","");
+    btn.className = "fruit-filter" + (r === rarity ? " active-"+rarity : "");
+  });
+  document.querySelectorAll(".fruit-item").forEach(item => {
+    if (rarity === "All" || item.dataset.rarity === rarity) {
+      item.classList.remove("hidden");
+    } else {
+      item.classList.add("hidden");
+    }
+  });
+}
+
+function voteApp(key, star, name, globalRating) {
+  if (!ratings[key]) ratings[key] = { myVote: 0, votes: [] };
+  if (ratings[key].myVote) {
+    const i = ratings[key].votes.lastIndexOf(ratings[key].myVote);
+    if (i !== -1) ratings[key].votes.splice(i, 1);
+  }
+  ratings[key].myVote = star;
+  ratings[key].votes = [...ratings[key].votes, star];
+  localStorage.setItem("appfinder_html_v1", JSON.stringify(ratings));
+
+  const all = [...ratings[key].votes, ...(globalRating ? [globalRating] : [])];
+  const avg = all.reduce((a,b)=>a+b,0)/all.length;
+
+  document.querySelector(".big").textContent = avg.toFixed(1);
+  document.querySelector(".votes").textContent = all.length + " OY";
+  document.querySelector(".vote-label").textContent = "SENİN OYUN: " + "★".repeat(star);
+  document.querySelectorAll(".star-btn").forEach((btn, i) => {
+    btn.classList.toggle("voted", i < star);
+  });
+  document.querySelectorAll(".star-d").forEach((el, i) => {
+    const s = i + 1;
+    el.style.color = avg >= s ? "#ffcc00" : avg >= s-0.5 ? "#ffcc0055" : "#2a3040";
+    el.textContent = avg >= s ? "★" : avg >= s-0.5 ? "⯨" : "☆";
+  });
+}
+</script>
+</body>
+</html>
